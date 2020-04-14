@@ -2,7 +2,7 @@ import React from 'react';
 import Plot from 'react-plotly.js';
 
 interface Props {
-  spikes: any,
+  data: any,
   onRelayout?: any,
 }
 
@@ -50,15 +50,15 @@ export default class SpikePlot extends React.Component<Props, State> {
   }
 
   componentDidUpdate(previousProps: Props, previousState: State) {
-    if (previousProps.spikes !== this.props.spikes) {
+    if (previousProps.data !== this.props.data) {
       this.updateData()
     }
   }
 
   updateData() {
     const { data, layout } = this.state;
-    data[0].x = this.props.spikes.times;
-    data[0].y = this.props.spikes.senders;
+    data[0].x = this.props.data.times;
+    data[0].y = this.props.data.senders;
     this.setState({ revision: this.state.revision + 1 });
     layout.datarevision = this.state.revision + 1;
   }

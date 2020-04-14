@@ -2,7 +2,6 @@ import React from 'react';
 import CircularProgress from '@material-ui/core/CircularProgress';
 
 import SpikePlot from './SpikePlot';
-import {get} from './requests';
 
 export interface Props {
   url: string,
@@ -16,8 +15,6 @@ enum ServerState {
 
 interface State {
   error: any,
-  isLoaded: boolean,
-  simulationEnd: boolean,
   figure: any,
   serverState: ServerState,
   currentTime: number,
@@ -32,8 +29,6 @@ export default class SpikeStreaming extends React.Component<Props, State> {
     super(props);
     this.state = {
       error: null,
-      isLoaded: false,
-      simulationEnd: false,
       figure: {},
       serverState: ServerState.Stopped,
       currentTime: 0,
@@ -56,7 +51,6 @@ export default class SpikeStreaming extends React.Component<Props, State> {
   reset() {
     if (this.state.serverState !== ServerState.Stopped) {
       this.setState({
-        isLoaded: false,
         serverState: ServerState.Stopped,
         currentTime: 0,
         populationIds: [],
@@ -66,8 +60,10 @@ export default class SpikeStreaming extends React.Component<Props, State> {
   }
 
   update() {
-    const url = this.props.url;
-    get(url + ':8080/nest/simulation_time_info')
+    const url = this.props.url + ':8080/nest/simulation_time_info';
+    fetch(url).then(res => res.json(), error => {
+        this.reset()
+      })
       .then(res => {
           if (!res) return
           if (res.hasOwnProperty('current')) {
@@ -102,22 +98,24 @@ export default class SpikeStreaming extends React.Component<Props, State> {
       serverState: ServerState.SetupInitited
     })
     let url = this.props.url + ':8080/nest/populations';
-    get(url).then(populationIds => {
-      this.setState({
-        populationIds: populationIds as number[],
+    fetch(url).then(res => res.json(), error => {
+        this.reset()
       })
-      var { graphData } = this.state;
-      populationIds.forEach(() => {
-        graphData.push({x: [], y: [], type: 'scattergl', mode: 'markers', hoverinfo: 'none'})
-      })
-      this.setState({
-        isLoaded: true,
-        serverState: ServerState.Running
-      })
-      console.log('Setup complete!')
-    }, error => {
-      this.reset()
-    });
+      .then(populationIds => {
+        this.setState({
+          populationIds: populationIds as number[],
+        })
+        var { graphData } = this.state;
+        populationIds.forEach(() => {
+          graphData.push({x: [], y: [], type: 'scattergl', mode: 'markers', hoverinfo: 'none'})
+        })
+        this.setState({
+          serverState: ServerState.Running
+        })
+        console.log('Setup complete!')
+      }, error => {
+        this.reset()
+      });
   }
 
   querySpikes(from: number, to: number) {
@@ -128,21 +126,24 @@ export default class SpikeStreaming extends React.Component<Props, State> {
       for (const populationId of this.state.populationIds) {
         console.log(`Requesting ${from} to ${to} for ${populationId}.`);
         const url = this.props.url + `:8080/nest/population/${populationId}/spikes`;
-        get(url).then(spikes => {
-          if (!spikes.hasOwnProperty('simulation_times')) return;
-          const simulationTimes = spikes['simulation_times'] as number[];
-          console.log(simulationTimes)
-          const gids = spikes['gids'] as number[];
-          const { populationIds, graphData } = this.state;
-          const populationIndex = populationIds.indexOf(populationId);
-          simulationTimes.forEach((simulationTime: number, i: number) => {
-            graphData[populationIndex].x.push(simulationTime)
-            graphData[populationIndex].y.push(gids[i])
+        fetch(url).then(res => res.json(), error => {
+            this.reset()
           })
-        }, error => {
-          console.log(`Spike request failed: ${error}`)
-          this.reset();
-        })
+          .then(spikes => {
+            if (!spikes.hasOwnProperty('simulation_times')) return;
+            const simulationTimes = spikes['simulation_times'] as number[];
+            console.log(simulationTimes)
+            const gids = spikes['gids'] as number[];
+            const { populationIds, graphData } = this.state;
+            const populationIndex = populationIds.indexOf(populationId);
+            simulationTimes.forEach((simulationTime: number, i: number) => {
+              graphData[populationIndex].x.push(simulationTime)
+              graphData[populationIndex].y.push(gids[i])
+            })
+          }, error => {
+            console.log(`Spike request failed: ${error}`)
+            this.reset();
+          })
       }
     }
   }
@@ -156,12 +157,11 @@ export default class SpikeStreaming extends React.Component<Props, State> {
 
   render() {
     const {
-      isLoaded,
-      graphData,
       currentTime,
+      graphData,
       serverState
     } = this.state;
-    if (!isLoaded) {
+    if (serverState !== ServerState.Running) {
       return (
         <div style = {{
             display: 'flex',
@@ -175,10 +175,9 @@ export default class SpikeStreaming extends React.Component<Props, State> {
     } else {
       return (
         <div>
-          <SpikePlot spikes={graphData} onRelayout={(layout: any) => this.handleRelayout(layout)}/>
+          <SpikePlot data={graphData} onRelayout={(layout: any) => this.handleRelayout(layout)}/>
           <div style={{position:'absolute', bottom:8, left: 8, textAlign: 'left', zIndex: 10}}>
-            Simulation current time: {(currentTime).toFixed(2)}s
-            <span>{serverState === ServerState.Running ? '(running)' : ''}</span>
+            Simulation current time: {currentTime} <span>{serverState === ServerState.Running ? '(running)' : ''}</span>
           </div>
         </div>
       )
