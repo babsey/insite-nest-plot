@@ -43,7 +43,7 @@ export default class SpikeStreaming extends React.Component<Props, State> {
   }
 
   componentDidMount() {
-    const timerID = setInterval(() => this.update(), 1000)
+    const timerID = setInterval(() => this.update(), 1000);
     this.setState({
       timerID: timerID
     })
@@ -69,6 +69,7 @@ export default class SpikeStreaming extends React.Component<Props, State> {
     const url = this.props.url;
     get(url + ':8080/nest/simulation_time_info')
       .then(res => {
+          if (!res) return
           if (res.hasOwnProperty('current')) {
             const newTime = res['current'];
             if (newTime < this.state.currentTime) {
