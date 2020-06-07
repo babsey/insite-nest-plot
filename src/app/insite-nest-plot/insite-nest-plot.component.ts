@@ -26,7 +26,7 @@ export class InsiteNestPlotComponent implements OnInit {
 
   // Internal
   public state = State.Stopped;
-  public currentTime: number = undefined;
+  public currentTime: number;
   public populationIds: number[] = [];
   public populationSpikes;
   public graphData = [];
@@ -66,6 +66,7 @@ export class InsiteNestPlotComponent implements OnInit {
       this.currentTime = undefined;
       this.populationIds = [];
       this.graphData = [];
+      this.graph.data = [];
     }
   }
 
@@ -81,7 +82,7 @@ export class InsiteNestPlotComponent implements OnInit {
         if (this.state !== State.Running) {
           this.setupSimulation();
         } else {
-          console.log('Update');
+          // console.log('Update');
           this.querySpikes(this.currentTime || 0, newTime);
           this.currentTime = newTime;
           if (this.following) {
@@ -104,6 +105,11 @@ export class InsiteNestPlotComponent implements OnInit {
     this.state = State.SetupInitited;
     this.http.get(`${this.url}:8080/nest/populations`).subscribe(populationIds => {
       this.populationIds = populationIds as number[];
+      if (this.populationIds.length === 0) {
+        this.reset();
+        return
+      }
+
       for (const x of this.populationIds) {
         this.graphData.push({ x: [], y: [], type: 'scattergl', mode: 'markers', hoverinfo: 'none' });
       }
@@ -123,13 +129,13 @@ export class InsiteNestPlotComponent implements OnInit {
       for (const populationId of this.populationIds) {
         // console.log(`Requesting ${from} to ${to} for ${populationId}`);
         const populationIndex = this.populationIds.indexOf(populationId);
-        const data = this.graph.data[populationIndex];
         this.http.get(`${this.url}:8080/nest/population/$${populationId}/spikes`).subscribe(spikes => {
           // console.log(`${this.url}:8080/nest/population/$${populationId}/spikes`);
           const simulationTimes = spikes['simulation_times'] as number[];
           const gids = spikes['gids'] as number[];
-          data.x = simulationTimes;
-          data.y = gids;
+          this.graphData[populationIndex].x = simulationTimes;
+          this.graphData[populationIndex].y = gids;
+          this.graph.data[populationIndex] = this.graphData[populationIndex];
         }, error => {
           console.error(`Spike request failed: ${error}`);
           this.reset();
