@@ -1,19 +1,18 @@
 <div style="width:800px">
   <mat-list dense style="position:absolute;z-index:1000">
     <mat-list-item>
-      <mat-checkbox color="primary" [(ngModel)]="updating" (click)="update()">Update</mat-checkbox>
+      <mat-checkbox color="primary" [(ngModel)]="updating">Update</mat-checkbox>
     </mat-list-item>
     <mat-list-item>
-      <mat-checkbox color="primary" [(ngModel)]="following" [disabled]="!running">Follow</mat-checkbox>
+      <mat-checkbox color="primary" [(ngModel)]="following">Follow</mat-checkbox>
     </mat-list-item>
   </mat-list>
-
 
   <plotly-plot
     [data]="graph.data"
     [layout]="graph.layout"
     [config]="graph.config"
-    (relayout)="onRelayout($event)"
+    [revision]="revision"
     (mousedown)="onMouseDown($event)"
     ></plotly-plot>
 
@@ -27,7 +26,7 @@
       </mat-form-field>
     </mat-list-item>
     <mat-list-item>
-      Current simulation time: {{ currentTime / 10 }} ms
+      Current simulation time: {{ currentTime }} ms
     </mat-list-item>
   </mat-list>
 </div>
