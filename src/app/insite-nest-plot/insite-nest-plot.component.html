@@ -1,7 +1,7 @@
 <div style="width:800px">
   <mat-list dense style="position:absolute;z-index:1000">
     <mat-list-item>
-      <mat-checkbox color="primary" [(ngModel)]="updating">Update</mat-checkbox>
+      <mat-checkbox color="primary" [(ngModel)]="updating" (click)="onUpdateClick()">Update</mat-checkbox>
     </mat-list-item>
     <mat-list-item>
       <mat-checkbox color="primary" [(ngModel)]="following">Follow</mat-checkbox>
@@ -12,7 +12,6 @@
     [data]="graph.data"
     [layout]="graph.layout"
     [config]="graph.config"
-    [revision]="revision"
     (mousedown)="onMouseDown($event)"
     ></plotly-plot>
 

@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 
 
 enum State {
@@ -20,7 +20,7 @@ export class InsiteNestPlotComponent implements OnInit {
   public to: number = 1000;
 
   // User options
-  public updating: boolean = true;
+  public updating: boolean = false;
   public following: boolean = false;
   public url: string;
 
@@ -28,9 +28,9 @@ export class InsiteNestPlotComponent implements OnInit {
   public state = State.Stopped;
   public currentTime: number;
   public populationIds: number[] = [];
-  public populationSpikes;
-  public graphData = [];
-  public revision = 1;
+  public populationSpikes: any;
+  public graphData: any[] = [];
+  private intervalId: any
 
   constructor(
     private http: HttpClient,
@@ -51,12 +51,18 @@ export class InsiteNestPlotComponent implements OnInit {
         scrollZoom: true,
       }
     };
-    this.init();
+    if (this.updating) {
+      this.init();
+    }
   }
 
   init() {
     console.log('Init');
-    setInterval(() => this.update(), 100);
+    this.intervalId = setInterval(() => this.update(), 100);
+  }
+
+  destroy() {
+    clearInterval(this.intervalId);
   }
 
   reset() {
@@ -71,10 +77,9 @@ export class InsiteNestPlotComponent implements OnInit {
   }
 
   update() {
-    if (!this.updating) return
     this.http.get(this.url + ':8080/nest/simulation_time_info').subscribe(res => {
       if (res.hasOwnProperty('current')) {
-        const newTime = parseFloat(res['current']);
+        const newTime = parseFloat(res['current'].toFixed(1));
         if (newTime < this.currentTime) {
           console.log('Simulation has appearently restarted');
           this.reset();
@@ -129,7 +134,7 @@ export class InsiteNestPlotComponent implements OnInit {
       for (const populationId of this.populationIds) {
         // console.log(`Requesting ${from} to ${to} for ${populationId}`);
         const populationIndex = this.populationIds.indexOf(populationId);
-        this.http.get(`${this.url}:8080/nest/population/$${populationId}/spikes`).subscribe(spikes => {
+        this.http.get(this.url + ":8080/nest/population/$" + populationId + "/spikes?from=" + from + '&to=' + to ).subscribe(spikes => {
           // console.log(`${this.url}:8080/nest/population/$${populationId}/spikes`);
           const simulationTimes = spikes['simulation_times'] as number[];
           const gids = spikes['gids'] as number[];
@@ -142,6 +147,10 @@ export class InsiteNestPlotComponent implements OnInit {
         });
       }
     }
+  }
+
+  onUpdateClick() {
+    setTimeout(() => this.updating ? this.init() : this.destroy(), 1)
   }
 
   follow() {
